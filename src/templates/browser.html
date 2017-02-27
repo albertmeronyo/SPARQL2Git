@@ -1,0 +1,82 @@
+{% include 'header.html' %}
+
+      <div class="container-fluid">
+        <h1>Welcome {{user_info['name']}}!</h1>
+
+        <div class="col-md-3">
+          <p>SPARQL repositories</p>
+          <button aria-hidden="true" class="btn btn-default delete pull-right" alt="Create new SPARQL repository"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
+          <table class="table table-hover table-bordered">
+          {% for sr, sr_obj in sparql_repos.iteritems(): %}
+          <tr><td><p><a id="{{sr}}" class="repo" href="#">{{sr}}</a></p></td></tr>
+          {% endfor %}
+          </table>
+
+          <p>SPARQL queries in REPO</p>
+          <button aria-hidden="true" class="btn btn-default delete pull-right" alt="Create new SPARQL query"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
+          <table id="files" class="table table-hover table-bordered">
+          </table>
+        </div>
+
+        <div class="col-md-9">
+          <div id="yasqe"></div>
+        </div>
+
+      </div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src='https://cdn.jsdelivr.net/yasqe/2.11.7/yasqe.bundled.min.js'></script>
+
+<script>
+
+var current_repo;
+var current_file;
+var yasqe = YASQE(document.getElementById("yasqe"));
+
+yasqe.setValue("");
+
+$('.repo').click(function() {
+  console.log("Clicked on repo " + $(this).text());
+  current_repo = $(this).text();
+  $.ajax({
+      type : 'GET',
+      url : "/queries",
+      dataType : "json",
+      async : false,
+      data : {
+          repo: $(this).text()
+      },
+      success: function(data) {
+          console.log(data);
+          $('#files').empty();
+          for (var i = 0; i < data.length; i++) {
+              $('#files').append('<tr><td><p><a id="' + data[i].replace(/\.[^/.]+$/, "") + '" class="query" href="#">' + data[i] + '</a></p></td></tr>');
+          }
+          $('.query').click(function() {
+            console.log("Clicked on query " + $(this).text());
+            current_file = $(this).text();
+            $.ajax({
+                type : 'GET',
+                url : "/query",
+                dataType : "text",
+                async : false,
+                data : {
+                    repo: current_repo,
+                    file: $(this).text()
+                },
+                success: function(data) {
+                    console.log(data);
+                    yasqe.setValue(data);
+                }
+            });
+          });
+      }
+  });
+});
+
+
+
+</script>
+
+{% include 'footer.html' %}
