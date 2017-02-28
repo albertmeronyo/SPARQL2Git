@@ -11,6 +11,10 @@
           <tr><td><p><a id="{{file['sha']}}" class="query" href="#">{{file['name']}}</a></p></td></tr>
           {% endfor %}
           </table>
+
+          <a class="btn btn-default" href="http://grlc.io/api/{{user_info['login']}}/{{repo}}/api-docs">
+            <img src="{{url_for('static', filename='img/grlc-logo-small-grey.png')}}" width='20px'/> grlc
+          </a>
         </div>
 
         <div class="col-md-9" style=" " id="querypane">
@@ -122,6 +126,7 @@ $('#commit').click(function() {
                           for (i = 0; i < data.length; i++) {
                             $('#files').append('<tr><td><p><a id="' + data[i].sha + '" class="query" href="#">'+ data[i].name +'</a></p></td></tr>');
                           }
+                          $('.query').click(query_handler);
                         }
                       });
                     }
@@ -158,7 +163,9 @@ $('#endpoint').focusout(function() {
   yasqe.options.sparql.endpoint = $(this).text();
 });
 
-$('.query').click(function() {
+$('.query').click(query_handler);
+
+function query_handler() {
   console.log("Clicked on query " + $(this).text() + " with SHA " + $(this).attr('id'));
   $('#querypane').show();
   current_file = $(this).text();
@@ -175,21 +182,25 @@ $('.query').click(function() {
       success: function(data) {
           console.log(data);
           // clear_all();
-          yasqe.setValue(data.query);
+          yasqe.setValue(data.query.trim());
           yasqe.options.sparql.endpoint = data.endpoint;
           yasqe.options.sparql.showQueryButton = true;
           $('#queryname').val(current_file);
           $('#summary').val(data.summary);
           $('#endpoint').val(data.endpoint);
-          console.log(data.tags.join());
-          $('#tags').val(data.tags.join());
-          console.log(data.enumerate.join());
-          $('#enumerate').val(data.enumerate.join());
+          if (data.tags) {
+            console.log(data.tags.join());
+            $('#tags').val(data.tags.join());
+          }
+          if (data.enumerate) {
+            console.log(data.enumerate.join());
+            $('#enumerate').val(data.enumerate.join());
+          }
           $('#method').val(data.method);
           $('#pagination').val(data.pagination);
       }
   });
-});
+}
 
 </script>
 
