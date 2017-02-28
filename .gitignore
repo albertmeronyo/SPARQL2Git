@@ -1,2 +1,8 @@
 .*!.gitignore
 *.pyc
+*.json
+bin/
+include/
+local/
+lib/
+share/

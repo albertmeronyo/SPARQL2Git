@@ -4,78 +4,192 @@
         <h1>Welcome {{user_info['name']}}!</h1>
 
         <div class="col-md-3">
-          <p>SPARQL repositories</p>
-          <button aria-hidden="true" class="btn btn-default delete pull-right" alt="Create new SPARQL repository"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
-          <table class="table table-hover table-bordered">
-          {% for sr, sr_obj in sparql_repos.iteritems(): %}
-          <tr><td><p><a id="{{sr}}" class="repo" href="#">{{sr}}</a></p></td></tr>
-          {% endfor %}
-          </table>
-
-          <p>SPARQL queries in REPO</p>
-          <button aria-hidden="true" class="btn btn-default delete pull-right" alt="Create new SPARQL query"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
+          <p>SPARQL queries in {{repo}}</p>
+          <button id="newquery" aria-hidden="true" class="btn btn-default delete pull-right" alt="Create new SPARQL query"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
           <table id="files" class="table table-hover table-bordered">
+          {% for file in files: %}
+          <tr><td><p><a id="{{file['sha']}}" class="query" href="#">{{file['name']}}</a></p></td></tr>
+          {% endfor %}
           </table>
         </div>
 
-        <div class="col-md-9">
-          <div id="yasqe"></div>
+        <div class="col-md-9" style=" " id="querypane">
+          <div class="form-group-queryname">
+            <label for="queryname">Query name</label>
+            <input type="text" class="form-control" id="queryname">
+          </div>
+          <div class="form-group-summary">
+            <label for="summary">Summary</label>
+            <input type="text" class="form-control" id="summary">
+          </div>
+          <div class="form-group-endpoint">
+            <label for="endpoint">Endpoint</label>
+            <input type="text" class="form-control" id="endpoint">
+          </div>
+          <div class="form-group-tags">
+            <label for="tags">Tags</label>
+            <input type="text" class="form-control" id="tags">
+          </div>
+          <div class="form-group-enumerate">
+            <label for="enumerate">Enumerate</label>
+            <input type="text" class="form-control" id="enumerate">
+          </div>
+          <div class="form-group-method">
+            <label for="method">Method</label>
+            <input type="text" class="form-control" id="method">
+          </div>
+          <div class="form-group-pagination">
+            <label for="pagination">Pagination</label>
+            <input type="text" class="form-control" id="pagination">
+          </div>
+          <div class="form-group-commit">
+            <button id="commit" aria-hidden="true" class="btn btn-default delete pull-right" alt="Commit this SPARQL query"><span class="glyphicon glyphicon-cloud-upload" aria-hidden="true"></span></button>
+          </div>
+          <div>
+            <label for="yasqe">SPARQL editor</label>
+            <div id="yasqe"></div>
+            <div id="yasr"></div>
+          </div>
         </div>
 
       </div>
 
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="http://code.jquery.com/ui/1.11.1/jquery-ui.min.js"></script>
 <script src='https://cdn.jsdelivr.net/yasqe/2.11.7/yasqe.bundled.min.js'></script>
-
+<script src='http://cdn.jsdelivr.net/yasr/2.4/yasr.bundled.min.js'></script>
+<!-- <script src="{{url_for('static', filename='js/sparql2git-ui.js')}}"></script> -->
 <script>
 
-var current_repo;
 var current_file;
-var yasqe = YASQE(document.getElementById("yasqe"));
+var current_sha;
 
+var yasqe = YASQE(document.getElementById("yasqe"), {
+  sparql: {
+		showQueryButton: true
+	}
+});
+var yasr = YASR(document.getElementById("yasr"), {
+	//this way, the URLs in the results are prettified using the defined prefixes in the query
+	getUsedPrefixes: yasqe.getPrefixesFromQuery
+});
+yasqe.options.sparql.callbacks.complete = yasr.setResponse;
 yasqe.setValue("");
 
-$('.repo').click(function() {
-  console.log("Clicked on repo " + $(this).text());
-  current_repo = $(this).text();
+$('#commit').click(function() {
+  $("<div class='dialog' title='Commit SPARQL query'><div class='form-group-commit'><label for='commitmessage'>Message</label><input type='text' class='form-control' id='commitmessage'></div></div>").dialog({
+          resizable: false,
+          height: 300,
+          width: 350,
+          modal: true,
+          buttons: {
+              Confirm: function() {
+                  console.log($('#commitmessage').val());
+                  console.log("{{repo}}");
+                  $.ajax({
+                    type : 'POST',
+                    url : '/commitquery',
+                    dataType : "json",
+                    async : false,
+                    data : {
+                      query_name : $('#queryname').val(),
+                      commit : $('#commitmessage').val(),
+                      sha : current_sha,
+                      repo : "{{repo}}",
+                      content : yasqe.getValue(),
+                      summary : $('#summary').val(),
+                      endpoint : $('#endpoint').val(),
+                      tags : $('#tags').val(),
+                      enumerate : $('#enumerate').val(),
+                      method : $('#method').val(),
+                      pagination : $('#pagination').val()
+                    },
+                    success: function(data) {
+                      console.log(data);
+                      // update file list
+                      $.ajax({
+                        type : 'GET',
+                        url : '/queries',
+                        dataType : "json",
+                        async : false,
+                        data : {
+                          repo : "{{repo}}"
+                        },
+                        success: function(data) {
+                          console.log(data);
+                          $('#files tr').remove();
+                          for (i = 0; i < data.length; i++) {
+                            $('#files').append('<tr><td><p><a id="' + data[i].sha + '" class="query" href="#">'+ data[i].name +'</a></p></td></tr>');
+                          }
+                        }
+                      });
+                    }
+                  });
+                  $(this).dialog("close");
+              },
+              Cancel: function() {
+                  $(this).dialog("close");
+              }
+          }
+      });
+  });
+
+function clear_all() {
+  yasqe.setValue('');
+  // yasqe.options.sparql.endpoint = data.endpoint;
+  yasqe.options.sparql.showQueryButton = true;
+  $('#queryname').val('');
+  $('#summary').val('');
+  $('#endpoint').val('');
+  $('#tags').val('');
+  $('#enumerate').val('');
+  $('#method').val('');
+  $('#pagination').val('');
+}
+
+$('#newquery').click(function() {
+  $('#querypane').show();
+  clar_all();
+});
+
+$('#endpoint').focusout(function() {
+  console.log("Changing YASQE endpoint to " + $(this).text());
+  yasqe.options.sparql.endpoint = $(this).text();
+});
+
+$('.query').click(function() {
+  console.log("Clicked on query " + $(this).text() + " with SHA " + $(this).attr('id'));
+  $('#querypane').show();
+  current_file = $(this).text();
+  current_sha = $(this).attr('id');
   $.ajax({
       type : 'GET',
-      url : "/queries",
+      url : "/query",
       dataType : "json",
       async : false,
       data : {
-          repo: $(this).text()
+          repo: "{{repo}}",
+          file: $(this).text()
       },
       success: function(data) {
           console.log(data);
-          $('#files').empty();
-          for (var i = 0; i < data.length; i++) {
-              $('#files').append('<tr><td><p><a id="' + data[i].replace(/\.[^/.]+$/, "") + '" class="query" href="#">' + data[i] + '</a></p></td></tr>');
-          }
-          $('.query').click(function() {
-            console.log("Clicked on query " + $(this).text());
-            current_file = $(this).text();
-            $.ajax({
-                type : 'GET',
-                url : "/query",
-                dataType : "text",
-                async : false,
-                data : {
-                    repo: current_repo,
-                    file: $(this).text()
-                },
-                success: function(data) {
-                    console.log(data);
-                    yasqe.setValue(data);
-                }
-            });
-          });
+          // clear_all();
+          yasqe.setValue(data.query);
+          yasqe.options.sparql.endpoint = data.endpoint;
+          yasqe.options.sparql.showQueryButton = true;
+          $('#queryname').val(current_file);
+          $('#summary').val(data.summary);
+          $('#endpoint').val(data.endpoint);
+          console.log(data.tags.join());
+          $('#tags').val(data.tags.join());
+          console.log(data.enumerate.join());
+          $('#enumerate').val(data.enumerate.join());
+          $('#method').val(data.method);
+          $('#pagination').val(data.pagination);
       }
   });
 });
-
-
 
 </script>
 

@@ -1,0 +1,51 @@
+{% include 'header.html' %}
+
+      <div class="jumbotron">
+        <h1>SPARQL2Git</h1>
+        <p class="lead">Select the GitHub repository you want to work with, or <a id="newrepo" href="#">create a new one</a>.</p>
+        <table class="table table-hover table-bordered">
+        {% for sr in sparql_repos: %}
+        <tr><td><p><a id="{{sr['name']}}" class="repo" href="/edit?repo={{sr['name']}}">{{sr['name']}}</a></p></td></tr>
+        {% endfor %}
+        </table>
+
+      </div>
+
+<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+<script src="http://code.jquery.com/ui/1.11.1/jquery-ui.min.js"></script>
+
+<script>
+$('#newrepo').click(function(){
+  $("<div class='dialog' title='Create SPARQL repository'><div class='form-group-reponame'><label for='reponame'>Name</label><input type='text' class='form-control' id='reponame'></div><div class='form-group-description'><label for='description'>Description</label><input type='text' class='form-control' id='description'>  </div></div>").dialog({
+        resizable: false,
+        height: 300,
+        width: 350,
+        modal: true,
+        buttons: {
+            "Confirm": function() {
+                console.log($('#reponame').val());
+                $.ajax({
+                  type : 'POST',
+                  url : '/newrepo',
+                  dataType : "json",
+                  async : false,
+                  data : {
+                    repo_name : $('#reponame').val(),
+                    repo_description : $('#description').val()
+                  },
+                  success: function(data) {
+                    console.log(data);
+                    window.location.href = "/edit?repo=" + $('#reponame').val();
+                  }
+                });
+                $(this).dialog("close");
+            },
+            Cancel: function() {
+                $(this).dialog("close");
+            }
+        }
+    });
+});
+</script>
+
+{% include 'footer.html' %}
