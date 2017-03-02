@@ -8,7 +8,7 @@
           <button id="newquery" aria-hidden="true" class="btn btn-default delete pull-right" alt="Create new SPARQL query"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
           <table id="files" class="table table-hover table-bordered">
           {% for file in files: %}
-          <tr><td><p><a id="{{file['sha']}}" class="query" href="#">{{file['name']}}</a></p></td></tr>
+          <tr><td><p><a id="{{file['sha']}}" class="query" href="#">{{file['name']}}</a></p> &nbsp; <a id="{{file['sha']}}-delete" data-sha="{{file['sha']}}" data-path="{{file['name']}}" class="deletequery" alt="Delete this SPARQL query" href="#">[x]</a></td></tr>
           {% endfor %}
           </table>
 
@@ -81,8 +81,68 @@ var yasr = YASR(document.getElementById("yasr"), {
 yasqe.options.sparql.callbacks.complete = yasr.setResponse;
 yasqe.setValue("");
 
+$('.deletequery').click(function(){
+  current_file = $(this).data('path');
+  current_sha = $(this).data('sha');
+  console.log(current_file + " " + current_sha);
+  $('body').find("#deletedialog").remove();
+  $("<div class='dialog' title='Delete SPARQL query' id='deletedialog'>Are you sure?</div>").dialog({
+          resizable: false,
+          height: 300,
+          width: 350,
+          modal: true,
+          buttons: {
+              Confirm: function() {
+                  console.log("{{repo}}");
+                  console.log("Deleting SHA " + current_sha);
+                  console.log("Deleting path " + current_file);
+                  $.ajax({
+                    type : 'POST',
+                    url : '/deletequery',
+                    dataType : "json",
+                    async : false,
+                    data : {
+                      name : current_file,
+                      sha : current_sha,
+                      repo : "{{repo}}",
+                    },
+                    success: function(data) {
+                      console.log(data);
+                      // update file list
+                      $.ajax({
+                        type : 'GET',
+                        url : '/queries',
+                        dataType : "json",
+                        async : false,
+                        data : {
+                          repo : "{{repo}}"
+                        },
+                        success: function(data) {
+                          console.log(data);
+                          $('#files tr').remove();
+                          for (i = 0; i < data.length; i++) {
+                            $('#files').append('<tr><td><p><a id="' + data[i].sha + '" class="query" href="#">'+ data[i].name +'</a></p> &nbsp; <a id="'+data[i].sha+'-delete" data-sha="'+data[i].sha+'" data-path="'+data[i].name+'" class="deletequery" alt="Delete this SPARQL query" href="#">[x]</a></td></tr>');
+                            current_sha = undefined;
+                            current_file = undefined;
+                          }
+                          $('.query').click(query_handler);
+                        }
+                      });
+                    }
+                  });
+                  $(this).dialog("destroy");
+              },
+              Cancel: function() {
+                  $(this).dialog("close");
+              }
+          }
+      });
+});
+
+
 $('#commit').click(function() {
-  $("<div class='dialog' title='Commit SPARQL query'><div class='form-group-commit'><label for='commitmessage'>Message</label><input type='text' class='form-control' id='commitmessage'></div></div>").dialog({
+  $('body').find("#commitdialog").remove();
+  $("<div class='dialog' title='Commit SPARQL query' id='commitdialog'><div class='form-group-commit'><label for='commitmessage'>Message</label><input type='text' class='form-control' id='commitmessage'></div></div>").dialog({
           resizable: false,
           height: 300,
           width: 350,
@@ -91,6 +151,7 @@ $('#commit').click(function() {
               Confirm: function() {
                   console.log($('#commitmessage').val());
                   console.log("{{repo}}");
+                  console.log("Committing over SHA " + current_sha);
                   $.ajax({
                     type : 'POST',
                     url : '/commitquery',
@@ -111,6 +172,7 @@ $('#commit').click(function() {
                     },
                     success: function(data) {
                       console.log(data);
+                      console.log("New SHA of query is " + data.commit.sha);
                       // update file list
                       $.ajax({
                         type : 'GET',
@@ -125,13 +187,16 @@ $('#commit').click(function() {
                           $('#files tr').remove();
                           for (i = 0; i < data.length; i++) {
                             $('#files').append('<tr><td><p><a id="' + data[i].sha + '" class="query" href="#">'+ data[i].name +'</a></p></td></tr>');
+                            if (data[i].name == current_file) {
+                              current_sha = data[i].sha;
+                            }
                           }
                           $('.query').click(query_handler);
                         }
                       });
                     }
                   });
-                  $(this).dialog("close");
+                  $(this).dialog("destroy");
               },
               Cancel: function() {
                   $(this).dialog("close");
@@ -155,12 +220,12 @@ function clear_all() {
 
 $('#newquery').click(function() {
   $('#querypane').show();
-  clar_all();
+  clear_all();
 });
 
 $('#endpoint').focusout(function() {
-  console.log("Changing YASQE endpoint to " + $(this).text());
-  yasqe.options.sparql.endpoint = $(this).text();
+  console.log("Changing YASQE endpoint to " + $('#endpoint').val());
+  yasqe.options.sparql.endpoint = $('#endpoint').val();
 });
 
 $('.query').click(query_handler);

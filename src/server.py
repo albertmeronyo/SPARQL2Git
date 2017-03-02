@@ -126,5 +126,16 @@ def commitquery():
 
     return resp
 
+@app.route("/deletequery", methods=["POST"])
+def deletequery():
+
+    repo = request.form.get('repo', '')
+    name =  request.form.get('name', '')
+    sha = request.form.get('sha', '')
+
+    resp = gapi.delete_query(repo, name, sha)
+
+    return resp
+
 if __name__ == "__main__":
     app.run(debug=True)

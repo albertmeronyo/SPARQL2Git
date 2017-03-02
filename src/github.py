@@ -125,3 +125,19 @@ class SPARQL2GitHub():
         self.s2glogger.debug("Request to create SPARQL query file returned status {}".format(resp))
 
         return jsonify(resp)
+
+    def delete_query(self, repo, name, sha):
+
+        data = { "path" : name,
+                 "message": "Deleted query in SPARQL2Git",
+                 "committer": {
+                    "name": self.user_info['login'],
+                    "email": self.user_info['email']
+                 },
+                 "sha": sha }
+
+        self.s2glogger.debug("Deleting query {} with SHA {} from repo {} of user {}".format(name, sha, repo, self.user_info['login']))
+        resp = requests.delete('https://api.github.com/repos/{}/{}/contents/{}'.format(self.user_info['login'], repo, name), headers=self.headers, data=json.dumps(data)).json()
+        self.s2glogger.debug("Request to delete SPARQL query file returned status {}".format(resp))
+
+        return jsonify(resp)
