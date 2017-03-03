@@ -1,7 +1,7 @@
 {% include 'header.html' %}
 
       <div class="container-fluid">
-        <h1>Welcome {{user_info['name']}}!</h1>
+        <h1>Welcome {{username}}!</h1>
 
         <div class="col-md-3">
           <p>SPARQL queries in {{repo}}</p>
@@ -12,7 +12,7 @@
           {% endfor %}
           </table>
 
-          <a class="btn btn-default" href="http://grlc.io/api/{{user_info['login']}}/{{repo}}/api-docs" target="_blank">
+          <a class="btn btn-default" href="http://grlc.io/api/{{username}}/{{repo}}/api-docs" target="_blank">
             <img src="{{url_for('static', filename='img/grlc-logo-small-grey.png')}}" width='20px'/> grlc
           </a>
         </div>
@@ -172,7 +172,6 @@ $('#commit').click(function() {
                     },
                     success: function(data) {
                       console.log(data);
-                      console.log("New SHA of query is " + data.commit.sha);
                       // update file list
                       $.ajax({
                         type : 'GET',
@@ -186,9 +185,10 @@ $('#commit').click(function() {
                           console.log(data);
                           $('#files tr').remove();
                           for (i = 0; i < data.length; i++) {
-                            $('#files').append('<tr><td><p><a id="' + data[i].sha + '" class="query" href="#">'+ data[i].name +'</a></p></td></tr>');
+                            $('#files').append('<tr><td><p><a id="' + data[i].sha + '" class="query" href="#">'+ data[i].name +'</a> &nbsp; <a id="'+data[i].sha+'-delete" data-sha="'+data[i].sha+'" data-path="'+data[i].name+'" class="deletequery" alt="Delete this SPARQL query" href="#">[x]</a></p></td></tr>');
                             if (data[i].name == current_file) {
                               current_sha = data[i].sha;
+                              console.log("New SHA of query is " + current_sha);
                             }
                           }
                           $('.query').click(query_handler);

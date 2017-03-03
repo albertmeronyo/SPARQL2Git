@@ -13,22 +13,23 @@ import static
 class SPARQL2GitHub():
     def __init__(self):
         self.s2glogger = logging.getLogger(__name__)
-        self.sparql_repos = {}
+        # self.sparql_repos = {}
 
         # self.user_sparql_repos(user_url)
 
-    def auth(self, user_info, access_token, scope):
-        self.headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
+    # def auth(self, user_info, access_token):
+    #     self.headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
+    #
+    #     self.user_info = user_info
 
-        self.user_info = user_info
-        self.scope = scope
-
-    def user_sparql_repos(self):
+    def user_sparql_repos(self, username, access_token):
         # Gets SPARQL repos of username
 
-        repos_url = requests.get(self.user_info['url'], headers=self.headers).json()['repos_url']
+        headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
+
+        repos_url = requests.get("https://api.github.com/users/{}".format(username, headers=headers)).json()['repos_url']
         self.s2glogger.debug("Repos URL: {}".format(repos_url))
-        repos_array = requests.get(repos_url, params={'per_page' : "100"}, headers=self.headers).json()
+        repos_array = requests.get(repos_url, params={'per_page' : "100"}, headers=headers).json()
 
         # for repo in repos_array:
         #     repo_name = repo['name']
@@ -52,12 +53,14 @@ class SPARQL2GitHub():
 
         return repos_array
 
-    def files_in_repo(self, repo):
+    def files_in_repo(self, username, access_token, repo):
         # Gets SPARQL files in repo
 
+        headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
+
         # return self.sparql_repos[repo_name]['files']
-        contents_url = 'https://api.github.com/repos/{}/{}/contents'.format(self.user_info['login'], repo)
-        file_array = requests.get(contents_url, params={'per_page' : "100"}, headers=self.headers).json()
+        contents_url = 'https://api.github.com/repos/{}/{}/contents'.format(username, repo)
+        file_array = requests.get(contents_url, params={'per_page' : "100"}, headers=headers).json()
         files = []
         for file_object in file_array:
             if 'name' not in file_object: # Repository is empty
@@ -72,60 +75,68 @@ class SPARQL2GitHub():
 
         return files
 
-    def query_contents(self, repo_name, file_name):
+    def query_contents(self, username, access_token, repo, filename):
         # JSON object with content of specified query, separating query from metadata
 
-        query_text = requests.get('https://raw.githubusercontent.com/{}/{}/master/{}'.format(self.user_info['login'], repo_name, file_name), headers=self.headers).text
+        headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
+
+        query_text = requests.get('https://raw.githubusercontent.com/{}/{}/master/{}'.format(username, repo, filename), headers=headers).text
         self.s2glogger.debug("Query text is: {}".format(query_text))
 
         return jsonify(get_yaml_decorators(query_text))
 
-    def create_repo(self, repo_name, description=None):
+    def create_repo(self, username, access_token, repo, description=None):
         # Creates repo for the authenticated user
 
-        data = { "name": repo_name,
+        headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
+        data = { "name": repo,
                  "description": description,
                  "homepage": None,
                  "private": False,
                  "has_issues": True,
                  "has_wiki": True }
         self.s2glogger.debug("Requesting new repo with data: {}".format(json.dumps(data)))
-        resp = requests.post('https://api.github.com/user/repos', headers=self.headers, data=json.dumps(data)).json()
+        resp = requests.post('https://api.github.com/user/repos', headers=headers, data=json.dumps(data)).json()
         self.s2glogger.debug("Request to create SPARQL repository returned status {}".format(resp))
 
         return jsonify(resp)
 
-    def create_query(self, repo, name):
-        # Creates file 'name' for user and repo
+    # def create_query(self, username, access_token, repo, name):
+    #     # Creates file 'name' for user and repo
+    #
+    #     headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
+    #
+    #     data = { "message": "Created new SPARQL query",
+    #              "content": b64encode("SELECT * WHERE {?s ?p ?o}") }
+    #     self.s2glogger.debug("Requesting new query with data: {}".format(json.dumps(data)))
+    #     resp = requests.put('https://api.github.com/repos/{}/{}/contents/{}'.format(self.user_info['login'], repo, name), headers=self.headers, data=json.dumps(data)).json()
+    #     self.s2glogger.debug("Request to create SPARQL query file returned status {}".format(resp))
+    #
+    #     return jsonify(resp)
 
-        data = { "message": "Created new SPARQL query",
-                 "content": b64encode("SELECT * WHERE {?s ?p ?o}") }
-        self.s2glogger.debug("Requesting new query with data: {}".format(json.dumps(data)))
-        resp = requests.put('https://api.github.com/repos/{}/{}/contents/{}'.format(self.user_info['login'], repo, name), headers=self.headers, data=json.dumps(data)).json()
-        self.s2glogger.debug("Request to create SPARQL query file returned status {}".format(resp))
-
-        return jsonify(resp)
-
-    def commit_query(self, repo, name, commit, sha, content):
+    def commit_query(self, username, access_token, repo, name, commit, sha, content):
         # Commits file
 
+        headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
         data = { "message": commit,
                  "content": b64encode(content),
                  "sha": sha }
         self.s2glogger.debug("Requesting new query with data: {}".format(json.dumps(data)))
-        resp = requests.put('https://api.github.com/repos/{}/{}/contents/{}'.format(self.user_info['login'], repo, name), headers=self.headers, data=json.dumps(data)).json()
+        resp = requests.put('https://api.github.com/repos/{}/{}/contents/{}'.format(username, repo, name), headers=headers, data=json.dumps(data)).json()
         self.s2glogger.debug("Request to create SPARQL query file returned status {}".format(resp))
 
         return jsonify(resp)
 
-    def delete_query(self, repo, name, sha):
+    def delete_query(self, username, access_token, repo, name, sha):
+
+        headers = { 'Accept' : 'application/json', 'Authorization': 'token {}'.format(access_token)}
 
         data = { "path" : name,
                  "message": "Deleted query in SPARQL2Git",
                  "sha": sha }
 
-        self.s2glogger.debug("Deleting query {} with SHA {} from repo {} of user {}".format(name, sha, repo, self.user_info['login']))
-        resp = requests.delete('https://api.github.com/repos/{}/{}/contents/{}'.format(self.user_info['login'], repo, name), headers=self.headers, data=json.dumps(data)).json()
+        self.s2glogger.debug("Deleting query {} with SHA {} from repo {} of user {}".format(name, sha, repo, username))
+        resp = requests.delete('https://api.github.com/repos/{}/{}/contents/{}'.format(username, repo, name), headers=headers, data=json.dumps(data)).json()
         self.s2glogger.debug("Request to delete SPARQL query file returned status {}".format(resp))
 
         return jsonify(resp)
