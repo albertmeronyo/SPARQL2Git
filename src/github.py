@@ -99,10 +99,6 @@ class SPARQL2GitHub():
         # Creates file 'name' for user and repo
 
         data = { "message": "Created new SPARQL query",
-                 "committer": {
-                    "name": self.user_info['name'],
-                    "email": self.user_info['email']
-                 },
                  "content": b64encode("SELECT * WHERE {?s ?p ?o}") }
         self.s2glogger.debug("Requesting new query with data: {}".format(json.dumps(data)))
         resp = requests.put('https://api.github.com/repos/{}/{}/contents/{}'.format(self.user_info['login'], repo, name), headers=self.headers, data=json.dumps(data)).json()
@@ -114,10 +110,6 @@ class SPARQL2GitHub():
         # Commits file
 
         data = { "message": commit,
-                 "committer": {
-                    "name": self.user_info['login'],
-                    "email": self.user_info['email']
-                 },
                  "content": b64encode(content),
                  "sha": sha }
         self.s2glogger.debug("Requesting new query with data: {}".format(json.dumps(data)))
@@ -130,10 +122,6 @@ class SPARQL2GitHub():
 
         data = { "path" : name,
                  "message": "Deleted query in SPARQL2Git",
-                 "committer": {
-                    "name": self.user_info['login'],
-                    "email": self.user_info['email']
-                 },
                  "sha": sha }
 
         self.s2glogger.debug("Deleting query {} with SHA {} from repo {} of user {}".format(name, sha, repo, self.user_info['login']))

@@ -138,4 +138,4 @@ def deletequery():
     return resp
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host=static.DEFAULT_HOST, port=static.DEFAULT_PORT)
