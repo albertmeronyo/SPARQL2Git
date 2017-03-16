@@ -108,21 +108,28 @@ def commitquery():
     content = request.form.get('content', '')
     summary = request.form.get('summary', '')
     endpoint = request.form.get('endpoint' , '')
+    mime = request.form.get('mime', '')
     tags = request.form.get('tags', '')
     enum = request.form.get('enumerate', '')
     method = request.form.get('method', '')
     pagination = request.form.get('pagination', '')
 
     full_content = "#+ summary: {}\n#+ endpoint: {}\n".format(summary, endpoint)
+    if mime:
+        full_content += "#+ mime: {}\n".format(mime)
     if tags:
         full_content += "#+ tags:\n"
         for tag in tags.split(','):
             full_content += "#+   - {}\n".format(tag)
     if enum:
         full_content += "#+ enumerate:\n"
-        for en in enum:
+        for en in enum.split(','):
             full_content += "#+   - {}\n".format(en)
-    full_content += "#+ method: {}\n#+ pagination: {}\n\n".format(method, pagination)
+    if method:
+        full_content += "#+ method: {}\n".format(method)
+    if pagination:
+        full_content += "#+ pagination: {}\n".format(pagination)
+    full_content += "\n"
     full_content += content
 
     s2glogger.debug("Committing full contents: {}".format(full_content))

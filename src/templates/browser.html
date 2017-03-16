@@ -4,7 +4,7 @@
         <h1>Welcome {{username}}!</h1>
 
         <div class="col-md-3">
-          <p>SPARQL queries in {{repo}}</p>
+          <p>SPARQL queries in <a href="https://github.com/{{username}}/{{repo}}/">{{repo}}</a></p>
           <button id="newquery" aria-hidden="true" class="btn btn-default delete pull-right" alt="Create new SPARQL query"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></button>
           <table id="files" class="table table-hover table-bordered">
           {% for file in files: %}
@@ -29,6 +29,10 @@
           <div class="form-group-endpoint">
             <label for="endpoint">Endpoint</label>
             <input type="text" class="form-control" id="endpoint">
+          </div>
+          <div class="form-group-mime">
+            <label for="method">MIME</label>
+            <input type="text" class="form-control" id="mime">
           </div>
           <div class="form-group-tags">
             <label for="tags">Tags</label>
@@ -149,9 +153,10 @@ $('#commit').click(function() {
           modal: true,
           buttons: {
               Confirm: function() {
+		  current_file = $('#queryname').val();
                   console.log($('#commitmessage').val());
                   console.log("{{repo}}");
-                  console.log("Committing over SHA " + current_sha);
+                  console.log("Committing " + current_file + " over SHA " + current_sha);
                   $.ajax({
                     type : 'POST',
                     url : '/commitquery',
@@ -165,6 +170,7 @@ $('#commit').click(function() {
                       content : yasqe.getValue(),
                       summary : $('#summary').val(),
                       endpoint : $('#endpoint').val(),
+		      mime: $('#mime').val(),
                       tags : $('#tags').val(),
                       enumerate : $('#enumerate').val(),
                       method : $('#method').val(),
@@ -172,6 +178,10 @@ $('#commit').click(function() {
                     },
                     success: function(data) {
                       console.log(data);
+		      // set current_file if it was new
+	              if (!current_file) {
+		        current_file = $('#queryname').val();
+		      }
                       // update file list
                       $.ajax({
                         type : 'GET',
@@ -184,6 +194,9 @@ $('#commit').click(function() {
                         success: function(data) {
                           console.log(data);
                           $('#files tr').remove();
+		          if (!current_file) {
+			    current_file = $('#queryname').val();
+                          }
                           for (i = 0; i < data.length; i++) {
                             $('#files').append('<tr><td><p><a id="' + data[i].sha + '" class="query" href="#">'+ data[i].name +'</a> &nbsp; <a id="'+data[i].sha+'-delete" data-sha="'+data[i].sha+'" data-path="'+data[i].name+'" class="deletequery" alt="Delete this SPARQL query" href="#">[x]</a></p></td></tr>');
                             if (data[i].name == current_file) {
@@ -212,6 +225,7 @@ function clear_all() {
   $('#queryname').val('');
   $('#summary').val('');
   $('#endpoint').val('');
+  $('#mime').val('');
   $('#tags').val('');
   $('#enumerate').val('');
   $('#method').val('');
@@ -253,6 +267,7 @@ function query_handler() {
           $('#queryname').val(current_file);
           $('#summary').val(data.summary);
           $('#endpoint').val(data.endpoint);
+          $('#mime').val(data.mime);
           if (data.tags) {
             console.log(data.tags.join());
             $('#tags').val(data.tags.join());
